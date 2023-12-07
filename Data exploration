@@ -1,0 +1,92 @@
+--viewing table covidDeaths
+select *
+from [Portfolio project]..covidDeaths
+
+--Death percentage (total cases vs total deaths) in Pakistan
+select location, date, total_cases,total_deaths, round(total_deaths/total_cases * 100, 4	) as deathPercentage
+from [Portfolio project]..covidDeaths
+where location = 'pakistan' and total_cases is Not null and total_deaths is not null and continent is not null
+
+--Infected percentage(total cases vs population) in Pakistan
+select location, date, total_cases, population, round(total_cases/population * 100, 4) as infectedPercentage
+from [Portfolio project]..covidDeaths
+where location = 'pakistan' and total_cases is Not null and total_deaths is not null
+ and continent is not null
+order by 5 desc
+
+--Countries with highest infection rate compared to population
+select location, population, max(total_cases) highest_infection_count, MAX(total_cases/population) * 100 as infectedPercentage
+from [Portfolio project]..covidDeaths
+group by population, location
+order by 4 desc
+
+--countries with highest percentage w.r.t population
+select location, population, max(total_deaths) highest_deaths, max(total_deaths/population * 100) deathPercentage
+from [Portfolio project]..covidDeaths
+where continent is not null
+group by location, population
+order by 4 desc
+
+--countries with highest death count
+select location, max(total_deaths) highest_deaths
+from [Portfolio project]..covidDeaths
+where continent is not null
+group by location
+order by 2 desc
+
+--death count w.r.t continents
+select continent, total_deaths as highest_deaths
+from [Portfolio project]..covidDeaths
+where continent is not null
+group by continent
+order by 2 desc
+
+--continents with highest death rate
+select continent, max(total_deaths) highest_deaths
+from [Portfolio project]..covidDeaths
+where continent is not null
+group by continent
+order by 2 desc
+
+--GLOBAL NUMBERS w.r.t date
+select date, sum(new_cases) total_new_cases, sum(total_deaths) total_death_count
+from [Portfolio project]..covidDeaths
+where new_cases is not null
+group by date
+order by 2 desc
+
+--viewing table covidVaccinations
+select *
+from [Portfolio project]..covidVaccinations
+
+--joining table covidDeaths and covidVaccinations
+select *
+from [Portfolio project]..covidDeaths dea
+join [Portfolio project]..covidVaccinations vac
+ on dea.location = vac.location and dea.date = vac.date
+
+ --Total population vs new vaccinations using CTE
+ with popvsvac (date, continent, location, population, new_vaccinations, summedvac) as
+(
+select dea.date, dea.continent, dea.location, dea.population, vac.new_vaccinations, 
+sum(cast(new_vaccinations as float)) over (partition by dea.location order by dea.location, dea.date) as summedvac
+from [Portfolio project]..covidDeaths dea
+join [Portfolio project]..covidVaccinations vac
+ on dea.location = vac.location and dea.date = vac.date
+ where dea.continent is not null and vac.new_vaccinations is not null and dea.location = 'pakistan' 
+ --order by 3,4
+ )
+
+--create view for visualization
+
+create view 
+popvsvac as
+select dea.date, dea.continent, dea.location, dea.population, vac.new_vaccinations, 
+sum(cast(new_vaccinations as float)) over (partition by dea.location order by dea.location, dea.date) as summedvac
+from [Portfolio project]..covidDeaths dea
+join [Portfolio project]..covidVaccinations vac
+ on dea.location = vac.location and dea.date = vac.date
+ where dea.continent is not null and vac.new_vaccinations is not null and dea.location = 'pakistan' 
+ --order by 3,4
+ 
+
